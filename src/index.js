@@ -11,10 +11,10 @@ export default {
     }
 
     try {
-      const url = env.SHEET_URL; // di-set dari Cloudflare Worker Settings → Variables
+      const url = env.APP_SCRIPT_URL; // di-set dari Cloudflare Worker Settings → Variables
       if (!url) {
         return new Response(
-          JSON.stringify({ status: "error", message: "SHEET_URL not set" }),
+          JSON.stringify({ status: "error", message: "APP_SCRIPT_URL not set" }),
           {
             status: 500,
             headers: {
