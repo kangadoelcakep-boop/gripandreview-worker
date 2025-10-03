@@ -1,0 +1,8 @@
+name = "gripandreview-backend"
+main = "src/index.js"
+compatibility_date = "2023-12-01"
+
+[vars]
+# Bisa kosong, nanti set lewat Cloudflare Dashboard (lebih aman)
+# SHEET_URL = "https://script.google.com/macros/s/AKfycbxxx/exec"
+
