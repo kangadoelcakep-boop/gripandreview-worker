@@ -1,14 +1,11 @@
 export default {
   async fetch(request, env) {
     try {
+      // --- CORS ---
       if (request.method === "OPTIONS") {
         return new Response("", {
           status: 204,
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-          },
+          headers: corsHeaders(),
         });
       }
 
@@ -16,37 +13,45 @@ export default {
         return new Response("Method Not Allowed", { status: 405 });
       }
 
+      const { pathname } = new URL(request.url);
       const data = await request.json();
-      const type = data.type;
 
-      if (type === "subscribe") {
-        // langsung forward ke Google Apps Script
-        return await forwardToAppScript(env.APP_SCRIPT_URL, data);
+      // --- Routing ---
+      if (pathname.endsWith("/subscribe")) {
+        return await forwardToAppScript(env.APP_SCRIPT_URL, {
+          type: "subscribe",
+          email: data.email,
+        });
       }
 
-      if (type === "check") {
-        // cek status email di Apps Script
-        return await forwardToAppScript(env.APP_SCRIPT_URL, data);
+      if (pathname.endsWith("/validate")) {
+        return await forwardToAppScript(env.APP_SCRIPT_URL, {
+          type: "check",
+          email: data.email,
+        });
       }
 
-      if (type === "review") {
-        // validasi & simpan review
-        return await forwardToAppScript(env.APP_SCRIPT_URL, data);
+      if (pathname.endsWith("/review")) {
+        return await forwardToAppScript(env.APP_SCRIPT_URL, {
+          type: "review",
+          ...data,
+        });
       }
 
-      return new Response(JSON.stringify({ status: "error", message: "Unknown type" }), {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        status: 400,
-      });
+      return new Response(
+        JSON.stringify({ status: "error", message: "Unknown endpoint" }),
+        { headers: corsHeaders(), status: 404 }
+      );
     } catch (err) {
-      return new Response(JSON.stringify({ status: "error", message: err.message }), {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        status: 500,
-      });
+      return new Response(
+        JSON.stringify({ status: "error", message: err.message }),
+        { headers: corsHeaders(), status: 500 }
+      );
     }
   },
 };
 
+// --- Helper untuk forward request ke Google Apps Script ---
 async function forwardToAppScript(url, data) {
   const res = await fetch(url, {
     method: "POST",
@@ -54,14 +59,18 @@ async function forwardToAppScript(url, data) {
     body: JSON.stringify(data),
   });
   const text = await res.text();
-  try {
-    return new Response(text, {
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
-  } catch (e) {
-    return new Response(JSON.stringify({ status: "error", message: "Invalid response from Apps Script" }), {
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      status: 500,
-    });
-  }
+
+  return new Response(text, {
+    headers: corsHeaders(),
+  });
+}
+
+// --- CORS headers ---
+function corsHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 }
